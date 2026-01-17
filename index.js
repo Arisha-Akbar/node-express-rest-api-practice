@@ -6,6 +6,12 @@ const PORT = 8000;
 
 app.use(express.urlencoded({ extended: false }));
 
+app.use((req, res, next) => {
+  console.log("hello from middleware 1");
+  req.myUserName = "arisha akbar ";
+  next();
+});
+
 app.get("/users", (req, res) => {
   const html = ` 
    <ul>
@@ -17,6 +23,7 @@ app.get("/users", (req, res) => {
 });
 
 app.get("/api/users", (req, res) => {
+  res.setHeader("MyName", "Arisha Akbar");
   return res.json(users);
 });
 
@@ -27,14 +34,25 @@ app
     const user = users.find((user) => user.id === id);
     return res.json(user);
   })
-  .patch(async(req, res) => {
+  .patch(async (req, res) => {
     const id = Number(req.params.id);
-    const data = fs.readFile("./MOCK_DATA.json", "utf-8", (err, data)=>{
-        res.json( { status: "success"});
-    })
+    const data = fs.readFile("./MOCK_DATA.json", "utf-8", (err, data) => {
+      res.json({ status: "success" });
+    });
 
-//const user = users.find(user => user.id === id);
-
+    //const user = users.find(user => user.id === id);
+    const user = users[id - 1];
+    if (!user) {
+      return res.status(404).json({ Error: "User not found" });
+    }
+    const updatedUser = { ...user, ...req.body };
+    users[id - 1] = updatedUser;
+    fs.writeFile("./MOCK_DATA.json", JSON.stringify(users), (err) => {
+      if (err) {
+        return res.json({ status: "error" });
+      }
+      return res.json({ status: "success" });
+    });
   })
   .delete(async (req, res) => {
     const id = Number(req.params.id);
@@ -56,7 +74,7 @@ app.post("/api/users", (req, res) => {
   const body = req.body;
   users.push({ ...body, id: users.length + 1 });
   fs.writeFile("./MOCK_DATA.json", JSON.stringify(users), (err, data) => {
-    return res.json({ status: "pending" });
+    return res.status(201).json({ status: "success", id: users.length });
   });
 });
 
